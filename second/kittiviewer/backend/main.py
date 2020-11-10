@@ -101,6 +101,7 @@ def get_pointcloud():
     if 'annotations' in sensor_data["lidar"]:
         annos = sensor_data["lidar"]['annotations']
         gt_boxes = annos["boxes"].copy()
+        print(f"Ground Truth boxes: {gt_boxes}")
         response["locs"] = gt_boxes[:, :3].tolist()
         response["dims"] = gt_boxes[:, 3:6].tolist()
         rots = np.concatenate([np.zeros([gt_boxes.shape[0], 2], dtype=np.float32), -gt_boxes[:, 6:7]], axis=1)
@@ -189,6 +190,7 @@ def build_network_():
 
 @app.route('/api/inference_by_idx', methods=['POST'])
 def inference_by_idx():
+    print("JOEJOE")
     global BACKEND
     instance = request.json
     response = {"status": "normal"}
@@ -216,9 +218,11 @@ def inference_by_idx():
     response["dt_rots"] = rots.tolist()
     response["dt_labels"] = pred["label_preds"].detach().cpu().numpy().tolist()
     response["dt_scores"] = pred["scores"].detach().cpu().numpy().tolist()
-
+    print(f"Doing Inference! Response is: {response}")
     response = jsonify(results=[response])
     response.headers['Access-Control-Allow-Headers'] = '*'
+
+
     return response
 
 

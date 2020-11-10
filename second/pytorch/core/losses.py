@@ -196,6 +196,8 @@ def _softmax_cross_entropy_with_logits(logits, labels):
   param = list(range(len(logits.shape)))
   transpose_param = [0] + [param[-1]] + param[1:-1]
   logits = logits.permute(*transpose_param) # [N, ..., C] -> [N, C, ...]
+  logits_max, _ = torch.max(logits, 1, keepdim=True)      # Modified to prevent Nan
+  logits = logits - logits_max                            # Modified to prevent Nan
   loss_ftor = nn.CrossEntropyLoss(reduction='none')
   loss = loss_ftor(logits, labels.max(dim=-1)[1])
   return loss

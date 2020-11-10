@@ -22,7 +22,7 @@ from second.pytorch.builder import (box_coder_builder, input_reader_builder,
                                     second_builder)
 from second.utils.log_tool import SimpleModelLog
 from second.utils.progress_bar import ProgressBar
-import psutil
+import pypsutil
 
 def example_convert_to_torch(example, dtype=torch.float32,
                              device=None) -> dict:
@@ -302,7 +302,6 @@ def train(config_path,
                 example_torch = example_convert_to_torch(example, float_dtype)
 
                 batch_size = example["anchors"].shape[0]
-
                 ret_dict = net_parallel(example_torch)
                 cls_preds = ret_dict["cls_preds"]
                 loss = ret_dict["loss"].mean()
@@ -312,6 +311,7 @@ def train(config_path,
                 cls_neg_loss = ret_dict["cls_neg_loss"].mean()
                 loc_loss = ret_dict["loc_loss"]
                 cls_loss = ret_dict["cls_loss"]
+                # print(cls_loss_reduced)
                 
                 cared = ret_dict["cared"]
                 labels = example_torch["labels"]
@@ -372,7 +372,7 @@ def train(config_path,
                         "num_neg": int(num_neg),
                         "num_anchors": int(num_anchors),
                         "lr": float(amp_optimizer.lr),
-                        "mem_usage": psutil.virtual_memory().percent,
+                        "mem_usage": pypsutil.virtual_memory().percent,
                     }
                     model_logging.log_metrics(metrics, global_step)
 
@@ -522,6 +522,7 @@ def evaluate(config_path,
             prep_example_times.append(time.time() - t1)
         with torch.no_grad():
             detections += net(example)
+            # print(detections)
         bar.print_bar()
         if measure_time:
             t2 = time.time()

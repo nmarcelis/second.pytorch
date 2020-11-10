@@ -4,13 +4,14 @@ import time
 from functools import partial
 
 import numpy as np
-
+import os
 from second.core import box_np_ops
 from second.core import preprocess as prep
 from second.data import kitti_common as kitti
 from second.utils.eval import get_coco_eval_result, get_official_eval_result
 from second.data.dataset import Dataset, register_dataset
 from second.utils.progress_bar import progress_bar_iter as prog_bar
+from second.data.kitti_common import filter_annos_min_gt
 
 @register_dataset
 class KittiDataset(Dataset):
@@ -22,6 +23,7 @@ class KittiDataset(Dataset):
                  class_names=None,
                  prep_func=None,
                  num_point_features=None):
+        print(info_path)
         assert info_path is not None
         with open(info_path, 'rb') as f:
             infos = pickle.load(f)
@@ -339,6 +341,77 @@ def _calculate_num_points_in_gt(data_path,
         num_points_in_gt = np.concatenate(
             [num_points_in_gt, -np.ones([num_ignored])])
         annos["num_points_in_gt"] = num_points_in_gt.astype(np.int32)
+
+
+
+def create_custom_info_file(train_root_path, val_root_path, save_path=None, relative_path=True):
+    train_imageset_folder = os.path.join(train_root_path, 'training/imageset/val.txt')
+    val_imageset_folder = os.path.join(val_root_path, 'training/imageset/val.txt')
+
+    train_img_ids = _read_imageset_file(train_imageset_folder)
+    val_img_ids = _read_imageset_file(val_imageset_folder)
+    # test_img_ids = _read_imageset_file(str(imageset_folder / "test.txt"))
+
+    print("Generate info. this may take several minutes.")
+    if save_path is None:
+        train_save_path = Path(train_root_path)
+        val_save_path = Path(val_root_path)
+    else:
+        train_save_path = Path(save_path)
+        val_save_path = Path(save_path)
+
+
+
+    kitti_infos_train = kitti.get_kitti_image_info(
+        train_root_path,
+        training=True,
+        velodyne=True,
+        calib=True,
+        image_ids=train_img_ids,
+        relative_path=relative_path)
+    _calculate_num_points_in_gt(train_root_path, kitti_infos_train, relative_path, remove_outside=False)
+    filename = train_save_path / 'kitti_infos_train.pkl'
+    print(f"Kitti info train file is saved to {filename}")
+    with open(filename, 'wb') as f:
+        pickle.dump(kitti_infos_train, f)
+
+
+    kitti_infos_val = kitti.get_kitti_image_info(
+        val_root_path,
+        training=True,
+        velodyne=True,
+        calib=True,
+        image_ids=val_img_ids,
+        relative_path=relative_path)
+    _calculate_num_points_in_gt(val_root_path, kitti_infos_val, relative_path, remove_outside=False)
+
+    filter_annos_min_gt(kitti_infos_val, 10)
+
+    filename = val_save_path / 'kitti_infos_val.pkl'
+    print(f"Kitti info val file is saved to {filename}")
+    with open(filename, 'wb') as f:
+        pickle.dump(kitti_infos_val, f)
+
+
+    # filename = save_path / 'kitti_infos_trainval.pkl'
+    # print(f"Kitti info trainval file is saved to {filename}")
+    # with open(filename, 'wb') as f:
+    #     pickle.dump(kitti_infos_train + kitti_infos_val, f)
+
+    # kitti_infos_test = kitti.get_kitti_image_info(
+    #     data_path,
+    #     training=False,
+    #     label_info=False,
+    #     velodyne=True,
+    #     calib=True,
+    #     image_ids=test_img_ids,
+    #     relative_path=relative_path)
+    # filename = save_path / 'kitti_infos_test.pkl'
+    # print(f"Kitti info test file is saved to {filename}")
+    # with open(filename, 'wb') as f:
+    #     pickle.dump(kitti_infos_test, f)
+
+
 
 
 def create_kitti_info_file(data_path, save_path=None, relative_path=True):

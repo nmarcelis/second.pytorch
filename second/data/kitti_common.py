@@ -108,10 +108,13 @@ def get_image_path(idx, prefix, training=True, relative_path=True, exist_check=T
 def get_label_path(idx, prefix, training=True, relative_path=True, exist_check=True):
     return get_kitti_info_path(idx, prefix, 'label_2', '.txt', training,
                                relative_path, exist_check)
-
+    # return get_kitti_info_path(idx, prefix, 'label_2_lowered', '.txt', training,
+    #                            relative_path, exist_check)
 def get_velodyne_path(idx, prefix, training=True, relative_path=True, exist_check=True):
     return get_kitti_info_path(idx, prefix, 'velodyne', '.bin', training,
                                relative_path, exist_check)
+    # return get_kitti_info_path(idx, prefix, 'velodyne_lowered', '.bin', training,
+    #                            relative_path, exist_check)
 
 def get_calib_path(idx, prefix, training=True, relative_path=True, exist_check=True):
     return get_kitti_info_path(idx, prefix, 'calib', '.txt', training,
@@ -130,9 +133,15 @@ def _check_kitti_directory(root_path):
     path_train_image_2 = path / 'training' / 'image_2'
     results.append(path_train_image_2.exists())
     results.append(len(path_train_image_2.glob('*.png')) == 7481)
+
+    # path_train_label_2 = path / 'training' / 'label_2_lowered'
     path_train_label_2 = path / 'training' / 'label_2'
+
     results.append(path_train_label_2.exists())
+
+    # path_train_lidar = path / 'training' / 'velodyne_lowered'
     path_train_lidar = path / 'training' / 'velodyne'
+
     results.append(path_train_lidar.exists())
     path_train_calib = path / 'training' / 'calib'
     results.append(path_train_calib.exists())
@@ -142,7 +151,10 @@ def _check_kitti_directory(root_path):
     path_test_image_2 = path / 'testing' / 'image_2'
     results.append(path_test_image_2.exists())
     results.append(len(path_test_image_2.glob('*.png')) == 7518)
+
+    # path_test_lidar = path / 'testing' / 'velodyne_lowered'
     path_test_lidar = path / 'testing' / 'velodyne'
+
     results.append(path_test_lidar.exists())
     path_test_calib = path / 'testing' / 'calib'
     results.append(path_test_calib.exists())
@@ -158,7 +170,7 @@ def get_kitti_image_info(path,
                          calib=False,
                          image_ids=7481,
                          extend_matrix=True,
-                         num_worker=8,
+                         num_worker=8,          # 8
                          relative_path=True,
                          with_imageshape=True):
     # image_infos = []
@@ -428,6 +440,19 @@ def filter_annos_class(image_annos, used_class):
         new_image_annos.append(img_filtered_annotations)
     return new_image_annos
 
+def filter_annos_min_gt(info_val, min_points):
+    # new_image_annos = []
+    for info in info_val:
+
+        img_filtered_annotations = {}
+        relevant_annotation_indices = [
+            i for i, x in enumerate(info['annos']['num_points_in_gt']) if x >= min_points
+        ]
+        for key in info['annos'].keys():
+            img_filtered_annotations[key] = (
+                info['annos'][key][relevant_annotation_indices])
+
+        info['annos'] = img_filtered_annotations
 
 def filter_annos_low_score(image_annos, thresh):
     new_image_annos = []
